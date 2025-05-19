@@ -1,40 +1,21 @@
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Random; 
+import java.awt.Color;
+import java.awt.Graphics;
 
-public class Tank {
-        private int x, y, width, height, dx;
+class Tank {
+    int x, y, width, height, lives;
+    Color color;
 
-        public Tank() {
-            width = 50;
-            height = 30;
-            x = (800 - width) / 2;
-            y = 600 - height - 10;
-            dx = 0;
-        }
-
-        public void move() {
-            x += dx;
-            x = Math.max(0, Math.min(x, 800 - width));
-        }
-
-        public void draw(Graphics g) {
-            g.setColor(Color.GREEN);
-            g.fillRect(x, y, width, height);
-        }
-
-        public void setDx(int dx) {
-            this.dx = dx;
-        }
-
-        public int getX() {
-            return x;
-        }
-
-        public int getWidth() {
-            return width;
-        }
+    public Tank(int x, int y, Color color) {
+        this.x = x;
+        this.y = y;
+        this.width = 30;
+        this.height = 20;
+        this.color = color;
+        this.lives = 3;
     }
+
+    public void draw(Graphics g) {
+        g.setColor(color);
+        g.fillRect(x, y, width, height);
+    }
+}

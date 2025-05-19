@@ -1,34 +1,27 @@
- import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Random;
+import java.awt.Color;
+import java.awt.Graphics;
 
-public class Bullet {
-        private int x, y, width, height;
+class Bullet {
+    int x, y;
+    double dx, dy;
+    final double GRAVITY = 0.1;
 
-        public Bullet(int x) {
-            this.x = x;
-            this.y = 600 - 40;
-            width = 5;
-            height = 10;
-        }
-
-        public void move() {
-            y -= 10;
-        }
-
-        public void draw(Graphics g) {
-            g.setColor(Color.RED);
-            g.fillRect(x, y, width, height);
-        }
-
-        public int getY() {
-            return y;
-        }
-
-        public Rectangle getBounds() {
-            return new Rectangle(x, y, width, height);
-        }
+    public Bullet(int x, int y, int angle, int power) {
+        this.x = x;
+        this.y = y;
+        double radian = Math.toRadians(angle);
+        dx = Math.cos(radian) * power / 10;
+        dy = -Math.sin(radian) * power / 10;
     }
+
+    public void move(int wind) {
+    	x += dx + wind / 10.0;
+	    y += dy;
+	    dy += GRAVITY;
+    }
+
+    public void draw(Graphics g) {
+        g.setColor(Color.BLACK);
+        g.fillOval(x - 3, y - 3, 6, 6);
+    }
+}
