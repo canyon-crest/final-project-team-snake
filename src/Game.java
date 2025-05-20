@@ -58,8 +58,8 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     }
 
     private void resetGame() {
-        player1 = new Tank(100, 0, Color.RED);
-        player2 = new Tank(700, 0, Color.ORANGE);
+        player1 = new Tank(100, 0, Color.RED, 20);
+        player2 = new Tank(700, 0, Color.ORANGE, 20);
         bullet = null;
         currentPlayer = 1;
         generateTerrain();
@@ -72,8 +72,9 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         terrain = new int[WIDTH];
         terrain[0] = 50;
         for (int i = 1; i < WIDTH; i++) {
-            terrain[i] = random.nextInt(GROUND_HEIGHT) + 50;
-            GROUND_HEIGHT = terrain[i-1];
+           // terrain[i] = random.nextInt(GROUND_HEIGHT) + 50;
+            //GROUND_HEIGHT = terrain[i-1];
+            terrain[i] = 50;
         }
         player1.y = HEIGHT - terrain[player1.x] - player1.height;
         player2.y = HEIGHT - terrain[player2.x] - player2.height;
@@ -105,6 +106,8 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         // Draw player lives
         g.drawString("Player 1 Lives: " + player1.lives, 10, 40);
         g.drawString("Player 2 Lives: " + player2.lives, 10, 60);
+//        g.drawString("Player 1 Energy: " + player1.energy, 10, 80);
+//        g.drawString("Player 2 Energy: " + player2.energy, 10, 100);
 
         if (gameOver) {
             g.setColor(Color.RED);
@@ -115,9 +118,11 @@ public class Game extends JPanel implements ActionListener, KeyListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (bullet != null) {
+    	requestFocusInWindow();
+    	if (bullet != null) {
         	bullet.move(wind);
             checkCollision();
+       
         }
         moveTanks();
         repaint();
@@ -131,7 +136,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
             if (currentTank == player2) {
             	angle = 180 - angle;
             }
-            bullet = new Bullet(currentTank.x + currentTank.width/2, currentTank.y, angle, power);
+           bullet = new Bullet(currentTank.x + currentTank.width/2, currentTank.y, angle, power);
         }
     }
 
@@ -159,6 +164,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
 
     private void switchPlayer() {
     	turn++;
+    	System.out.println(turn);
         currentPlayer = (currentPlayer == 1) ? 2 : 1;
         wind = random.nextInt(21) - 10;
     }
@@ -166,15 +172,19 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     private void moveTanks() {
         if (leftPressed1 && player1.x > 0 && turn % 2 == 1) {
             player1.x -= 2;
+            player1.energy -= 2;
         }
         if (rightPressed1 && player1.x < WIDTH - player1.width && turn % 2 == 1) {
             player1.x += 2;
+            player1.energy -= 2;
         }
         if (leftPressed2 && player2.x > 0 && turn % 2 == 0) {
             player2.x -= 2;
+            player2.energy -= 2;
         }
         if (rightPressed2 && player2.x < WIDTH - player2.width && turn % 2 == 0) {
             player2.x += 2;
+            player2.energy -= 2;
         }
 
         // Adjust tank y position based on terrain
@@ -197,6 +207,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
                 break;
             case KeyEvent.VK_RIGHT: 
                 rightPressed2 = true;
+                System.out.println("right presed");
                 break;
             case KeyEvent.VK_R: 
                 resetGame();
