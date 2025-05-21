@@ -106,8 +106,8 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         // Draw player lives
         g.drawString("Player 1 Lives: " + player1.lives, 10, 40);
         g.drawString("Player 2 Lives: " + player2.lives, 10, 60);
-//        g.drawString("Player 1 Energy: " + player1.energy, 10, 80);
-//        g.drawString("Player 2 Energy: " + player2.energy, 10, 100);
+        g.drawString("Player 1 Energy: " + player1.energy, 10, 80);
+        g.drawString("Player 2 Energy: " + player2.energy, 10, 100);
 
         if (gameOver) {
             g.setColor(Color.RED);
