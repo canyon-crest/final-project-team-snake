@@ -58,8 +58,8 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     }
 
     private void resetGame() {
-        player1 = new Tank(100, 0, Color.RED, 20);
-        player2 = new Tank(700, 0, Color.ORANGE, 20);
+        player1 = new Tank(100, 0, Color.RED, 100);
+        player2 = new Tank(700, 0, Color.ORANGE, 100);
         bullet = null;
         currentPlayer = 1;
         generateTerrain();
@@ -106,8 +106,8 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         // Draw player lives
         g.drawString("Player 1 Lives: " + player1.lives, 10, 40);
         g.drawString("Player 2 Lives: " + player2.lives, 10, 60);
-        g.drawString("Player 1 Energy: " + player1.energy, 10, 80);
-        g.drawString("Player 2 Energy: " + player2.energy, 10, 100);
+        g.drawString("Player 1 Fuel: " + player1.energy, 10, 80);
+        g.drawString("Player 2 Fuel: " + player2.energy, 10, 100);
 
         if (gameOver) {
             g.setColor(Color.RED);
@@ -166,23 +166,29 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     	turn++;
     	System.out.println(turn);
         currentPlayer = (currentPlayer == 1) ? 2 : 1;
+        if (turn % 2 == 1) {
+        	player2.energy = 100;
+        }
+        else if (turn % 2 == 0){
+        	player1.energy = 100;
+        }
         wind = random.nextInt(21) - 10;
     }
     
     private void moveTanks() {
-        if (leftPressed1 && player1.x > 0 && turn % 2 == 1) {
+        if (leftPressed1 && player1.x > 0 && turn % 2 == 1 && player1.energy > 0) {
             player1.x -= 2;
             player1.energy -= 2;
         }
-        if (rightPressed1 && player1.x < WIDTH - player1.width && turn % 2 == 1) {
+        if (rightPressed1 && player1.x < WIDTH - player1.width && turn % 2 == 1 && player1.energy > 0) {
             player1.x += 2;
             player1.energy -= 2;
         }
-        if (leftPressed2 && player2.x > 0 && turn % 2 == 0) {
+        if (leftPressed2 && player2.x > 0 && turn % 2 == 0 && player2.energy > 0) {
             player2.x -= 2;
             player2.energy -= 2;
         }
-        if (rightPressed2 && player2.x < WIDTH - player2.width && turn % 2 == 0) {
+        if (rightPressed2 && player2.x < WIDTH - player2.width && turn % 2 == 0 && player2.energy > 0) {
             player2.x += 2;
             player2.energy -= 2;
         }
