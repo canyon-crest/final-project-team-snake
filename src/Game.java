@@ -70,11 +70,45 @@ public class Game extends JPanel implements ActionListener, KeyListener {
 
     private void generateTerrain() {
         terrain = new int[WIDTH];
-        terrain[0] = 50;
+        terrain[0] = 100;
+        boolean up = true;
+        int count = 30;
+        int last = terrain[0];
         for (int i = 1; i < WIDTH; i++) {
-           // terrain[i] = random.nextInt(GROUND_HEIGHT) + 50;
-            //GROUND_HEIGHT = terrain[i-1];
-            terrain[i] = 50;
+        	int add = 0;
+        	if (up) {
+        		add += (int) (Math.random()*2);
+        	}
+        	else {
+        		add -= (int) (Math.random()*2);
+        	}
+        	
+            terrain[i] = add + last;
+            last += add;
+            if (last < 50) {
+            	last = 50;
+            }
+            count--;
+            
+            if (count == 0) {
+            	int choose = (int)(Math.random() * 2);
+            	if (choose == 0) {
+            		up = true;
+            	}
+            	else {
+            		up = false;
+            	}
+            	count = (int)(Math.random() * 60) - 29;
+            }
+            last += add;
+            if (last < 50) {
+            	last = 50;
+            	up = true;
+            }
+            if (last > 300) {
+            	last = 300;
+            	up = false;
+            }
         }
         player1.y = HEIGHT - terrain[player1.x] - player1.height;
         player2.y = HEIGHT - terrain[player2.x] - player2.height;
@@ -141,10 +175,10 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     }
 
     private void checkCollision() {
-        if (bullet.y > HEIGHT - terrain[bullet.x]) {
+        if (bullet.x <= 0 || bullet.x >= WIDTH-1) {
         	bullet = null;
             switchPlayer();
-        } else if (bullet.x < 0 || bullet.x > WIDTH) {
+        } else if (bullet.y > HEIGHT - terrain[bullet.x]) {
         	bullet = null;
             switchPlayer();
         } else {
