@@ -14,6 +14,22 @@ class Tank {
         this.lives = 3;
         this.energy = energy;
     }
+    
+    public int getX() {
+    	return x;
+    }
+    
+    public int getY() {
+    	return x;
+    }
+    
+    public int getLives() {
+    	return lives;
+    }
+    
+    public int getEnergy() {
+    	return energy;
+    }
 
     public void draw(Graphics g) {
         g.setColor(color);
