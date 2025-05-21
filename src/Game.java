@@ -55,20 +55,20 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         
         showScreen(Screen.START);
 
-        angleSlider = new JSlider(0, 90, 45);
-        powerSlider = new JSlider(0, 100, 50);
-        fireButton = new JButton("Fire!");
-        fireButton.addActionListener(e -> fire());
-
-        JPanel controlPanel = new JPanel();
-        controlPanel.add(new JLabel("Angle:"));
-        controlPanel.add(angleSlider);
-        controlPanel.add(new JLabel("Power:"));
-        controlPanel.add(powerSlider);
-        controlPanel.add(fireButton);
-
-        setLayout(new BorderLayout());
-        add(controlPanel, BorderLayout.SOUTH);
+//        angleSlider = new JSlider(0, 90, 45);
+//        powerSlider = new JSlider(0, 100, 50);
+//        fireButton = new JButton("Fire!");
+//        fireButton.addActionListener(e -> fire());
+//
+//        JPanel controlPanel = new JPanel();
+//        controlPanel.add(new JLabel("Angle:"));
+//        controlPanel.add(angleSlider);
+//        controlPanel.add(new JLabel("Power:"));
+//        controlPanel.add(powerSlider);
+//        controlPanel.add(fireButton);
+//
+//        setLayout(new BorderLayout());
+//        add(controlPanel, BorderLayout.SOUTH);
 
         timer = new Timer(1000 / 60, this);
         timer.start();
