@@ -23,6 +23,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     private Random random;
     private boolean gameOver;
     private String winner;
+    private boolean it = false;
     
     private boolean leftPressed1 = false;
     private boolean rightPressed1 = false;
@@ -35,16 +36,23 @@ public class Game extends JPanel implements ActionListener, KeyListener {
 
     public Game() {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
-        setBackground(Color.BLUE);
+        //setBackground(Color.BLUE);
         setFocusable(true);
         addKeyListener(this);
 
         random = new Random();
         resetGame();
         
+        it = false;
+        
      // Initialize screens
         cardLayout = new CardLayout();
         setLayout(cardLayout);
+        
+        angleSlider = new JSlider(0, 90, 45);
+        powerSlider = new JSlider(0, 100, 50);
+        fireButton = new JButton("Fire!");
+        fireButton.addActionListener(e -> fire());
         
      // Add screens
         add(createStartScreen(), "START");
@@ -55,20 +63,16 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         
         showScreen(Screen.START);
 
-//        angleSlider = new JSlider(0, 90, 45);
-//        powerSlider = new JSlider(0, 100, 50);
-//        fireButton = new JButton("Fire!");
-//        fireButton.addActionListener(e -> fire());
-//
-//        JPanel controlPanel = new JPanel();
+        
+      JPanel controlPanel = new JPanel();
 //        controlPanel.add(new JLabel("Angle:"));
 //        controlPanel.add(angleSlider);
 //        controlPanel.add(new JLabel("Power:"));
 //        controlPanel.add(powerSlider);
 //        controlPanel.add(fireButton);
-//
+
 //        setLayout(new BorderLayout());
-//        add(controlPanel, BorderLayout.SOUTH);
+        add(controlPanel, BorderLayout.SOUTH);
 
         timer = new Timer(1000 / 60, this);
         timer.start();
@@ -137,6 +141,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         JButton pvpButton = new JButton("Player vs Player");
         pvpButton.addActionListener(e -> {
             resetGame();
+            it = true;
             showScreen(Screen.GAMEPLAY);
         });
         gameModeScreen.add(pvpButton, gbc);
@@ -221,7 +226,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     }
 
     private void generateTerrain() {
-        terrain = new int[WIDTH];
+    	terrain = new int[WIDTH];
         terrain[0] = 100;
         boolean up = true;
         int count = 30;
@@ -267,9 +272,9 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     }
     
     @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        if (currentScreen == Screen.GAMEPLAY) {
+	public void paint(Graphics g) {
+        //super.paintComponent(g);
+        if (it == true) {
 	        // Draw terrain
 	        g.setColor(Color.GREEN);
 	        for (int i = 0; i < WIDTH; i++) {
@@ -279,6 +284,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
 	        // Draw tanks
 	        player1.draw(g);
 	        player2.draw(g);
+	        System.out.println("tanks drawns");
 	
 	        // Draw shell
 	        if (bullet != null) {
@@ -306,7 +312,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     @Override
     public void actionPerformed(ActionEvent e) {
     	requestFocusInWindow();
-    	if (currentScreen == Screen.GAMEPLAY) {
+    	if (true || currentScreen == Screen.GAMEPLAY) {
 	    	if (bullet != null) {
 	        	bullet.move(wind);
 	            checkCollision();
