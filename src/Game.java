@@ -97,6 +97,10 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         wind = random.nextInt(21) - 10;
         gameOver = false;
         winner = null;
+        if (aiMode) {
+        	player1.x = 700;
+        	player2.x = 100;
+        }
     }
 
     private void generateTerrain() {
@@ -285,16 +289,20 @@ public class Game extends JPanel implements ActionListener, KeyListener {
                     player2.x += step;
                     player2.energy -= 2;
                     player2.y = HEIGHT - terrain[player2.x] - player2.height;
-                    try { Thread.sleep(10); } catch (InterruptedException ignored) {}
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
                 } else {
                     break;
                 }
             }
         }
 
-        int dx = player1.x - player2.x;
+        int dx = player2.x - player1.x;
         int dy = player2.y - player1.y;
-        double angleRad = Math.atan2(-dy, dx);
+        double angleRad = Math.atan2(dx, dy);
         int angle = (int) Math.toDegrees(angleRad);
         if (angle < 0) angle += 360;
         angle = Math.max(10, Math.min(angle, 80));
@@ -345,7 +353,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         } catch (IllegalArgumentException e) {
             System.out.println("Could not load one or more images.");
         }
-        }
+    }
 
     private void moveTanks() {
         if (leftPressed1 && player1.x > 0 && turn % 2 == 1 && player1.energy > 0) {
@@ -356,11 +364,11 @@ public class Game extends JPanel implements ActionListener, KeyListener {
             player1.x += 2;
             player1.energy -= 2;
         }
-        if (leftPressed2 && player2.x > 0 && turn % 2 == 0 && player2.energy > 0) {
+        if (!aiMode && leftPressed2 && player2.x > 0 && turn % 2 == 0 && player2.energy > 0) {
             player2.x -= 2;
             player2.energy -= 2;
         }
-        if (rightPressed2 && player2.x < WIDTH - player2.width && turn % 2 == 0 && player2.energy > 0) {
+        if (!aiMode && rightPressed2 && player2.x < WIDTH - player2.width && turn % 2 == 0 && player2.energy > 0) {
             player2.x += 2;
             player2.energy -= 2;
         }
@@ -437,8 +445,9 @@ public class Game extends JPanel implements ActionListener, KeyListener {
                     gamePanel.setAIMode(true);
                     gamePanel.setAIDifficulty(choice);
                     layout.show(mainPanel, "GAME");
+                    gamePanel.resetGame();
                 }
-            } else if (source.getText().equals("2 vs 2")) {
+            } else if (source.getText().equals("1 vs 1")) {
                 gamePanel.resetGame();
                 layout.show(mainPanel, "GAME");
             } else {

@@ -23,7 +23,7 @@ public class GameModeScreen extends JPanel {
         gbc.gridy = 1;
         add(aiModeButton, gbc);
 
-        twoPlayerModeButton = new JButton("2 vs 2");
+        twoPlayerModeButton = new JButton("1 vs 1");
         twoPlayerModeButton.addActionListener(actionListener);
         gbc.gridy = 2;
         add(twoPlayerModeButton, gbc);
