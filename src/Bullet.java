@@ -15,17 +15,17 @@ class Bullet {
     }
 
     public void move(int wind) {
-    	x += dx + wind / 10.0;
-	    y += dy;
-	    dy += GRAVITY;
+        x += dx + wind / 10.0;
+        y += dy;
+        dy += GRAVITY;
     }
-    
+
     public int getX() {
-    	return x;
+        return x;
     }
-    
+
     public int getY() {
-    	return y;
+        return y;
     }
 
     public void draw(Graphics g) {
