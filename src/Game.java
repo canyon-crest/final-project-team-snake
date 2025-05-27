@@ -1,22 +1,33 @@
+// --- Game.java ---
+// Full implementation with errors fixed
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Random;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 
 public class Game extends JPanel implements ActionListener, KeyListener {
+    private JPanel mainPanel;
+    private CardLayout layout;
+    public EndScreen endScreen;
     public static final int WIDTH = 800;
     public static final int HEIGHT = 600;
-    private static  int GROUND_HEIGHT = 10;
-    
-    private enum Screen {START, HOW_TO_PLAY, GAME_MODE, GAMEPLAY, END}
-    private Screen currentScreen;
-    private CardLayout cardLayout;
+    private static int GROUND_HEIGHT = 10;
+    private boolean aiMode = false;
+    private enum Difficulty { EASY, MEDIUM, HARD }
+    private Difficulty aiDifficulty = Difficulty.MEDIUM;
+    private int aiMissCount = 0;
 
     private Timer timer;
     private Tank player1;
     private Tank player2;
     private static int turn = 1;
     private Bullet bullet;
+    private int explosionTimer = 0;
+    private int explosionX = -1, explosionY = -1;
     private int currentPlayer;
     private int[] terrain;
     private int wind;
@@ -24,7 +35,11 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     private boolean gameOver;
     private String winner;
     private boolean it = false;
-    
+
+    private BufferedImage skyImage;
+    private BufferedImage tankImage1;
+    private BufferedImage tankImage2;
+
     private boolean leftPressed1 = false;
     private boolean rightPressed1 = false;
     private boolean leftPressed2 = false;
@@ -34,138 +49,24 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     private JSlider powerSlider;
     private JButton fireButton;
 
-    public Game() {
+    public Game(JPanel mainPanel, CardLayout layout, EndScreen endScreen) {
+        // loadImages();
+        this.mainPanel = mainPanel;
+        this.layout = layout;
+        this.endScreen = endScreen;
+
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
-        //setBackground(Color.BLUE);
         setFocusable(true);
         addKeyListener(this);
+        setLayout(new BorderLayout());
 
         random = new Random();
         resetGame();
-        
-        it = false;
-        
-     // Initialize screens
-        cardLayout = new CardLayout();
-        setLayout(cardLayout);
-        
-        angleSlider = new JSlider(0, 90, 45);
+
+        angleSlider = new JSlider(0, 180, 90);
         powerSlider = new JSlider(0, 100, 50);
         fireButton = new JButton("Fire!");
         fireButton.addActionListener(e -> fire());
-        
-     // Add screens
-        add(createStartScreen(), "START");
-        add(createHowToPlayScreen(), "HOW_TO_PLAY");
-        add(createGameModeScreen(), "GAME_MODE");
-        add(createGameplayScreen(), "GAMEPLAY");
-        add(createEndScreen(), "END");
-        
-        showScreen(Screen.START);
-
-        
-      JPanel controlPanel = new JPanel();
-//        controlPanel.add(new JLabel("Angle:"));
-//        controlPanel.add(angleSlider);
-//        controlPanel.add(new JLabel("Power:"));
-//        controlPanel.add(powerSlider);
-//        controlPanel.add(fireButton);
-
-//        setLayout(new BorderLayout());
-        add(controlPanel, BorderLayout.SOUTH);
-
-        timer = new Timer(1000 / 60, this);
-        timer.start();
-    }
-    
-    private JPanel createStartScreen() {
-        JPanel startScreen = new JPanel(new GridBagLayout());
-        startScreen.setBackground(Color.CYAN);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-
-        JLabel titleLabel = new JLabel("Hills of Fire");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 36));
-        startScreen.add(titleLabel, gbc);
-
-        JButton playButton = new JButton("Play");
-        playButton.addActionListener(e -> showScreen(Screen.GAME_MODE));
-        gbc.gridy = 1;
-        startScreen.add(playButton, gbc);
-
-        JButton howToPlayButton = new JButton("How to Play");
-        howToPlayButton.addActionListener(e -> showScreen(Screen.HOW_TO_PLAY));
-        gbc.gridy = 2;
-        startScreen.add(howToPlayButton, gbc);
-
-        JButton exitButton = new JButton("Exit");
-        exitButton.addActionListener(e -> System.exit(0));
-        gbc.gridy = 3;
-        startScreen.add(exitButton, gbc);
-
-        return startScreen;
-    }
-    
-    private JPanel createHowToPlayScreen() {
-        JPanel howToPlayScreen = new JPanel(new BorderLayout());
-        howToPlayScreen.setBackground(Color.LIGHT_GRAY);
-
-        JTextArea instructionsArea = new JTextArea(
-            "How to Play Hills of Fire:\n\n" +
-            "1. Use A/D (Player 1) or Left/Right arrows (Player 2) to move tanks.\n" +
-            "2. Adjust angle and power using sliders.\n" +
-            "3. Press 'Fire' button to shoot.\n" +
-            "4. Consider wind direction and strength.\n" +
-            "5. Hit the enemy tank to reduce their lives.\n" +
-            "6. Last tank standing wins!"
-        );
-        instructionsArea.setEditable(false);
-        instructionsArea.setLineWrap(true);
-        instructionsArea.setWrapStyleWord(true);
-        instructionsArea.setMargin(new Insets(10, 10, 10, 10));
-        howToPlayScreen.add(new JScrollPane(instructionsArea), BorderLayout.CENTER);
-
-        JButton backButton = new JButton("Back to Menu");
-        backButton.addActionListener(e -> showScreen(Screen.START));
-        howToPlayScreen.add(backButton, BorderLayout.SOUTH);
-
-        return howToPlayScreen;
-    }
-    
-    private JPanel createGameModeScreen() {
-        JPanel gameModeScreen = new JPanel(new GridBagLayout());
-        gameModeScreen.setBackground(Color.ORANGE);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-
-        JButton pvpButton = new JButton("Player vs Player");
-        pvpButton.addActionListener(e -> {
-            resetGame();
-            it = true;
-            showScreen(Screen.GAMEPLAY);
-        });
-        gameModeScreen.add(pvpButton, gbc);
-
-        JButton pveButton = new JButton("Player vs AI");
-        pveButton.addActionListener(e -> {
-            resetGame();
-            // TODO: Implement AI logic
-            showScreen(Screen.GAMEPLAY);
-        });
-        gbc.gridy = 1;
-        gameModeScreen.add(pveButton, gbc);
-
-        JButton backButton = new JButton("Back to Main Menu");
-        backButton.addActionListener(e -> showScreen(Screen.START));
-        gbc.gridy = 2;
-        gameModeScreen.add(backButton, gbc);
-
-        return gameModeScreen;
-    }
-    
-    private JPanel createGameplayScreen() {
-        JPanel gameplayScreen = new JPanel(new BorderLayout());
-        gameplayScreen.setBackground(Color.BLUE);
 
         JPanel controlPanel = new JPanel();
         controlPanel.add(new JLabel("Angle: "));
@@ -173,51 +74,24 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         controlPanel.add(new JLabel("Power: "));
         controlPanel.add(powerSlider);
         controlPanel.add(fireButton);
-        gameplayScreen.add(controlPanel, BorderLayout.SOUTH);
+        add(controlPanel, BorderLayout.SOUTH);
 
-        return gameplayScreen;
+        timer = new Timer(1000 / 60, this);
+        timer.start();
+        it = true;
     }
-    
-    private JPanel createEndScreen() {
-        JPanel endScreen = new JPanel(new GridBagLayout());
-        endScreen.setBackground(Color.PINK);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
 
-        JLabel winnerLabel = new JLabel();
-        winnerLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        endScreen.add(winnerLabel, gbc);
-
-        JButton playAgainButton = new JButton("Play Again");
-        playAgainButton.addActionListener(e -> {
-            resetGame();
-            showScreen(Screen.GAMEPLAY);
-        });
-        gbc.gridy = 1;
-        endScreen.add(playAgainButton, gbc);
-
-        JButton mainMenuButton = new JButton("Main Menu");
-        mainMenuButton.addActionListener(e -> showScreen(Screen.START));
-        gbc.gridy = 2;
-        endScreen.add(mainMenuButton, gbc);
-
-        return endScreen;
+    public Game() {
+        this(null, null, null);
     }
-    
-    private void showScreen(Screen screen) {
-        currentScreen = screen;
-        cardLayout.show(this, screen.name());
-        if (screen == Screen.GAMEPLAY) {
-            requestFocusInWindow();
-        }
-    }
-    
-    
 
     private void resetGame() {
         player1 = new Tank(100, 0, Color.RED, 100);
         player2 = new Tank(700, 0, Color.ORANGE, 100);
         bullet = null;
+        explosionX = -1;
+        explosionY = -1;
+        explosionTimer = 0;
         currentPlayer = 1;
         generateTerrain();
         wind = random.nextInt(21) - 10;
@@ -226,101 +100,96 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     }
 
     private void generateTerrain() {
-    	terrain = new int[WIDTH];
-        terrain[0] = 100;
-        boolean up = true;
-        int count = 30;
-        int last = terrain[0];
+        terrain = new int[WIDTH];
+        terrain[0] = 200;
+        double smoothness = 1.0;
         for (int i = 1; i < WIDTH; i++) {
-        	int add = 0;
-        	if (up) {
-        		add += (int) (Math.random()*2);
-        	}
-        	else {
-        		add -= (int) (Math.random()*2);
-        	}
-        	
-            terrain[i] = add + last;
-            last += add;
-            if (last < 50) {
-            	last = 50;
-            }
-            count--;
-            
-            if (count == 0) {
-            	int choose = (int)(Math.random() * 2);
-            	if (choose == 0) {
-            		up = true;
-            	}
-            	else {
-            		up = false;
-            	}
-            	count = (int)(Math.random() * 60) - 29;
-            }
-            last += add;
-            if (last < 50) {
-            	last = 50;
-            	up = true;
-            }
-            if (last > 300) {
-            	last = 300;
-            	up = false;
-            }
+            double variation = (random.nextDouble() - 0.5) * 10;
+            double slope = (terrain[i - 1] - (i >= 2 ? terrain[i - 2] : 200)) * 0.5;
+            terrain[i] = terrain[i - 1] + (int)(variation - slope * 0.3);
+            if (terrain[i] < 100) terrain[i] = 100;
+            if (terrain[i] > 300) terrain[i] = 300;
         }
+
         player1.y = HEIGHT - terrain[player1.x] - player1.height;
         player2.y = HEIGHT - terrain[player2.x] - player2.height;
     }
-    
+
     @Override
-	public void paint(Graphics g) {
-        //super.paintComponent(g);
-        if (it == true) {
-	        // Draw terrain
-	        g.setColor(Color.GREEN);
-	        for (int i = 0; i < WIDTH; i++) {
-	            g.drawLine(i, HEIGHT - terrain[i], i, HEIGHT);
-	        }
-	
-	        // Draw tanks
-	        player1.draw(g);
-	        player2.draw(g);
-	        System.out.println("tanks drawns");
-	
-	        // Draw shell
-	        if (bullet != null) {
-	        	bullet.draw(g);
-	        }
-	
-	        // Draw wind indicator
-	        g.setColor(Color.BLACK);
-	        g.drawString("Wind: " + wind, 10, 20);
-	
-	        // Draw player lives
-	        g.drawString("Player 1 Lives: " + player1.lives, 10, 40);
-	        g.drawString("Player 2 Lives: " + player2.lives, 10, 60);
-	        g.drawString("Player 1 Fuel: " + player1.energy, 10, 80);
-	        g.drawString("Player 2 Fuel: " + player2.energy, 10, 100);
-	
-	        if (gameOver) {
-	            g.setColor(Color.RED);
-	            g.setFont(new Font("Arial", Font.BOLD, 30));
-	            g.drawString(winner + " wins!", WIDTH/2 - 70, HEIGHT/2);
-	        }
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        if (skyImage != null) {
+            g.drawImage(skyImage, 0, 0, WIDTH, HEIGHT, null);
+        } else {
+            g.setColor(Color.CYAN);
+            g.fillRect(0, 0, WIDTH, HEIGHT);
+        }
+
+        if (it) {
+            g.setColor(Color.GREEN);
+            for (int i = 0; i < WIDTH; i++) {
+                g.drawLine(i, HEIGHT - terrain[i], i, HEIGHT);
+            }
+
+            drawTank(g, player1);
+            drawTank(g, player2);
+
+            if (bullet != null) {
+                bullet.draw(g);
+            }
+
+            // Debug line for AI aim
+            if (aiMode && currentPlayer == 2 && bullet == null) {
+                int dx = player1.x - player2.x;
+                int dy = player2.y - player1.y;
+                double angleRad = Math.atan2(-dy, dx);
+        int angle = (int) Math.toDegrees(angleRad);
+        if (angle < 0) angle += 360;
+        angle = Math.max(10, Math.min(angle, 170));
+        angle = Math.max(10, Math.min(angle, 80));
+                int power = 60;
+                double radians = Math.toRadians(angle);
+                int x1 = player2.x + player2.width / 2;
+                int y1 = player2.y;
+                int x2 = x1 + (int)(Math.cos(radians) * power * 1.5);
+                int y2 = y1 - (int)(Math.sin(radians) * power * 1.5);
+                g.setColor(Color.MAGENTA);
+                g.drawLine(x1, y1, x2, y2);
+            }
+
+            if (explosionTimer > 0) {
+                g.setColor(Color.ORANGE);
+                g.fillOval(explosionX - 10, explosionY - 10, 20, 20);
+            }
+
+            g.setColor(Color.BLACK);
+            g.drawString("Wind: " + wind, 10, 20);
+            g.drawString("Player 1 Lives: " + player1.lives, 10, 40);
+            g.drawString("Player 2 Lives: " + player2.lives, 10, 60);
+            g.drawString("Player 1 Fuel: " + player1.energy, 10, 80);
+            g.drawString("Player 2 Fuel: " + player2.energy, 10, 100);
         }
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-    	requestFocusInWindow();
-    	if (true || currentScreen == Screen.GAMEPLAY) {
-	    	if (bullet != null) {
-	        	bullet.move(wind);
-	            checkCollision();
-	       
-	        }
-	        moveTanks();
-	        repaint();
-    	}
+        requestFocusInWindow();
+
+        if (aiMode && currentPlayer == 2 && bullet == null && !gameOver) {
+            aiFire();
+        }
+
+        if (bullet != null) {
+            bullet.move(wind);
+            checkCollision();
+            if (gameOver) return;
+        } else if (explosionTimer > 0) {
+            explosionTimer--;
+        }
+
+        moveTanks();
+        repaint();
     }
 
     private void fire() {
@@ -328,53 +197,156 @@ public class Game extends JPanel implements ActionListener, KeyListener {
             int angle = angleSlider.getValue();
             int power = powerSlider.getValue();
             Tank currentTank = (currentPlayer == 1) ? player1 : player2;
-            if (currentTank == player2) {
-            	angle = 180 - angle;
-            }
-           bullet = new Bullet(currentTank.x + currentTank.width/2, currentTank.y, angle, power);
+
+            
+
+            bullet = new Bullet(currentTank.x + currentTank.width / 2, currentTank.y, angle, power);
         }
     }
 
     private void checkCollision() {
-    	if (player1.lives <= 0 || player2.lives <= 0) {
-            gameOver = true;
-            winner = "Player " + currentPlayer;
-            endGame();
-        }
-        if (bullet.x <= 0 || bullet.x >= WIDTH-1) {
-        	bullet = null;
-            switchPlayer();
-        } else if (bullet.y > HEIGHT - terrain[bullet.x]) {
-        	bullet = null;
-            switchPlayer();
-        } else {
-            Tank targetTank = (currentPlayer == 1) ? player2 : player1;
-            if (bullet.x >= targetTank.x && bullet.x <= targetTank.x + targetTank.width &&
-            		bullet.y >= targetTank.y && bullet.y <= targetTank.y + targetTank.height) {
-                targetTank.lives--;
-                bullet = null;
-                if (targetTank.lives <= 0) {
-                    gameOver = true;
-                    winner = "Player " + currentPlayer;
-                }
-                switchPlayer();
+        if (bullet.x <= 0 || bullet.x >= WIDTH - 1 || bullet.y > HEIGHT - terrain[bullet.x]) {
+            if (bullet != null) {
+            for (int i = Math.max(0, bullet.getX() - 10); i < Math.min(WIDTH, bullet.getX() + 10); i++) {
+                terrain[i] = Math.max(0, terrain[i] - 10);
             }
+            explosionX = bullet.getX();
+            explosionY = bullet.getY();
+            explosionTimer = 15;
+        }
+        bullet = null;
+        if (aiMode && currentPlayer == 2) aiMissCount++;
+            switchPlayer();
+            return;
+        }
+
+        Tank targetTank = (currentPlayer == 1) ? player2 : player1;
+        if (bullet.x >= targetTank.x && bullet.x <= targetTank.x + targetTank.width &&
+            bullet.y >= targetTank.y && bullet.y <= targetTank.y + targetTank.height) {
+
+            targetTank.lives--;
+            bullet = null;
+            aiMissCount = 0;
+
+            if (targetTank.lives <= 0) {
+                winner = (currentPlayer == 1) ? "Player 1" : "Player 2";
+                endGame();
+                return;
+            }
+
+            switchPlayer();
+        }
+    }
+
+    private void endGame() {
+        gameOver = true;
+        if (endScreen != null && layout != null && mainPanel != null) {
+            endScreen.setWinner(winner);
+            layout.show(mainPanel, "END");
+        }
+    }
+
+    private void setAIMode(boolean ai) {
+        this.aiMode = ai;
+        this.aiDifficulty = Difficulty.MEDIUM; // Default
+        this.aiMissCount = 0;
+    }
+
+    public void setAIDifficulty(String level) {
+        switch (level.toLowerCase()) {
+            case "easy": aiDifficulty = Difficulty.EASY; break;
+            case "hard": aiDifficulty = Difficulty.HARD; break;
+            default: aiDifficulty = Difficulty.MEDIUM; break;
         }
     }
 
     private void switchPlayer() {
-    	turn++;
-    	System.out.println(turn);
+        turn++;
         currentPlayer = (currentPlayer == 1) ? 2 : 1;
+
         if (turn % 2 == 1) {
-        	player2.energy = 100;
+            player2.energy = 100;
+        } else {
+            player1.energy = 100;
         }
-        else if (turn % 2 == 0){
-        	player1.energy = 100;
-        }
+
         wind = random.nextInt(21) - 10;
     }
+
+    private void aiFire() {
+        int direction = (player1.x < player2.x) ? -1 : 1;
+        int distance = Math.abs(player1.x - player2.x);
+
+        if (player2.energy >= 2 && distance > 100) {
+            int steps = Math.min(player2.energy / 2, 20);
+            for (int i = 0; i < steps; i++) {
+                int step = direction;
+                if (player2.x + step >= 0 && player2.x + step <= WIDTH - player2.width) {
+                    player2.x += step;
+                    player2.energy -= 2;
+                    player2.y = HEIGHT - terrain[player2.x] - player2.height;
+                    try { Thread.sleep(10); } catch (InterruptedException ignored) {}
+                } else {
+                    break;
+                }
+            }
+        }
+
+        int dx = player1.x - player2.x;
+        int dy = player2.y - player1.y;
+        double angleRad = Math.atan2(-dy, dx);
+        int angle = (int) Math.toDegrees(angleRad);
+        if (angle < 0) angle += 360;
+        angle = Math.max(10, Math.min(angle, 80));
+
+        int randomness = 0;
+        switch (aiDifficulty) {
+            case EASY: randomness = 10; break;
+            case MEDIUM: randomness = 5; break;
+            case HARD: randomness = 2; break;
+        }
+        randomness += aiMissCount * 2;
+
+        int recoil = (aiDifficulty == Difficulty.HARD) ? 0 : (aiDifficulty == Difficulty.MEDIUM ? 5 : 10);
+        int power = (int) Math.min(100, Math.max(30,
+            (distance + wind * 2) / 2.0 + aiMissCount + random.nextInt(randomness + 1 + recoil) - randomness / 2));
+        bullet = new Bullet(player2.x + player2.width / 2, player2.y, angle, power);
+    }
+
+
     
+    private void drawTank(Graphics g, Tank tank) {
+        BufferedImage img = (tank == player1) ? tankImage1 : tankImage2;
+        int angle = angleSlider.getValue();
+
+        if (img != null) {
+            g.drawImage(img, tank.x, tank.y, tank.width, tank.height, null);
+        } else {
+            g.setColor(tank.color);
+            g.fillRect(tank.x, tank.y, tank.width, tank.height);
+        }
+
+        int baseX = tank.x + tank.width / 2;
+        int baseY = tank.y + 5;
+        double radians = Math.toRadians(angle);
+        int barrelLength = 20;
+        int endX = baseX + (int)(barrelLength * Math.cos(radians));
+        int endY = baseY - (int)(barrelLength * Math.sin(radians));
+
+        g.setColor(Color.DARK_GRAY);
+        g.drawLine(baseX, baseY, endX, endY);
+        }
+
+    private void loadImages() {
+        try {
+            // skyImage = ImageIO.read(getClass().getResource("/sky.png"));
+            // tankImage1 = ImageIO.read(getClass().getResource("/tank1.png"));
+            // tankImage2 = ImageIO.read(getClass().getResource("/tank2.png"));
+        } catch (IllegalArgumentException e) {
+            System.out.println("Could not load one or more images.");
+        }
+        }
+
     private void moveTanks() {
         if (leftPressed1 && player1.x > 0 && turn % 2 == 1 && player1.energy > 0) {
             player1.x -= 2;
@@ -393,7 +365,6 @@ public class Game extends JPanel implements ActionListener, KeyListener {
             player2.energy -= 2;
         }
 
-        // Adjust tank y position based on terrain
         player1.y = HEIGHT - terrain[player1.x] - player1.height;
         player2.y = HEIGHT - terrain[player2.x] - player2.height;
     }
@@ -402,59 +373,88 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
         switch (key) {
-            case KeyEvent.VK_A: 
-                leftPressed1 = true;
-                break;
-            case KeyEvent.VK_D: 
-                rightPressed1 = true;
-                break;
-            case KeyEvent.VK_LEFT: 
-                leftPressed2 = true;
-                break;
-            case KeyEvent.VK_RIGHT: 
-                rightPressed2 = true;
-                break;
-            case KeyEvent.VK_R: 
-                resetGame();
-                break;
+            case KeyEvent.VK_A: leftPressed1 = true; break;
+            case KeyEvent.VK_D: rightPressed1 = true; break;
+            case KeyEvent.VK_LEFT: leftPressed2 = true; break;
+            case KeyEvent.VK_RIGHT: rightPressed2 = true; break;
+            case KeyEvent.VK_R: resetGame(); break;
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        int key = e.getKeyCode();
+        switch (key) {
+            case KeyEvent.VK_A: leftPressed1 = false; break;
+            case KeyEvent.VK_D: rightPressed1 = false; break;
+            case KeyEvent.VK_LEFT: leftPressed2 = false; break;
+            case KeyEvent.VK_RIGHT: rightPressed2 = false; break;
         }
     }
 
     @Override
     public void keyTyped(KeyEvent e) {}
 
-    @Override
-    public void keyReleased(KeyEvent e) {
-        int key = e.getKeyCode();
-        switch (key) {
-            case KeyEvent.VK_A: 
-                leftPressed1 = false;
-                break;
-            case KeyEvent.VK_D: 
-                rightPressed1 = false;
-                break;
-            case KeyEvent.VK_LEFT: 
-                leftPressed2 = false;
-                break;
-            case KeyEvent.VK_RIGHT: 
-                rightPressed2 = false;
-                break;
-        }
-    }
-    
-    private void endGame() {
-        gameOver = true;
-        JLabel winnerLabel = (JLabel) ((JPanel) getComponent(4)).getComponent(0);
-        winnerLabel.setText(winner + " wins!");
-        showScreen(Screen.END);
-    }
-
     public static void main(String[] args) {
         JFrame frame = new JFrame("Hills of Fire");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
-        frame.add(new Game());
-        frame.pack();
+        frame.setSize(WIDTH, HEIGHT);
+
+        CardLayout layout = new CardLayout();
+        JPanel mainPanel = new JPanel(layout);
+
+        Game gamePanel = new Game(mainPanel, layout, null);
+        EndScreen endScreen = new EndScreen(e -> {
+            gamePanel.resetGame();
+            gamePanel.setAIMode(false);
+            layout.show(mainPanel, "START");
+        });
+        gamePanel.endScreen = endScreen;
+
+        StartScreen startScreen = new StartScreen(
+            e -> layout.show(mainPanel, "MODE"),
+            e -> layout.show(mainPanel, "HOW"),
+            e -> System.exit(0)
+        );
+        HowToPlayScreen howToPlayScreen = new HowToPlayScreen(
+            e -> layout.show(mainPanel, "START")
+        );
+        GameModeScreen gameModeScreen = new GameModeScreen(e -> {
+            JButton source = (JButton) e.getSource();
+            if (source.getText().equals("AI Battle")) {
+                String[] options = {"Easy", "Medium", "Hard"};
+                String choice = (String) JOptionPane.showInputDialog(
+                    frame,
+                    "Select AI Difficulty:",
+                    "AI Settings",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    options,
+                    "Medium"
+                );
+                if (choice != null) {
+                    gamePanel.setAIMode(true);
+                    gamePanel.setAIDifficulty(choice);
+                    layout.show(mainPanel, "GAME");
+                }
+            } else if (source.getText().equals("2 vs 2")) {
+                gamePanel.resetGame();
+                layout.show(mainPanel, "GAME");
+            } else {
+                layout.show(mainPanel, "START");
+            }
+        });
+
+        mainPanel.add(startScreen, "START");
+        mainPanel.add(howToPlayScreen, "HOW");
+        mainPanel.add(gameModeScreen, "MODE");
+        mainPanel.add(gamePanel, "GAME");
+        mainPanel.add(endScreen, "END");
+
+        frame.add(mainPanel);
+        layout.show(mainPanel, "START");
+
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
