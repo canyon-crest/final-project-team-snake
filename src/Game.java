@@ -1,5 +1,4 @@
-// --- Game.java ---
-// Full implementation with errors fixed
+// Main game panel and logic for "Hills of Fire"
 
 import javax.swing.*;
 import java.awt.*;
@@ -9,47 +8,64 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 
+/**
+ * The main game class for Hills of Fire.
+ * Handles gameplay logic, rendering, and user input.
+ */
 public class Game extends JPanel implements ActionListener, KeyListener {
+    // Main menu and card switching references
     private JPanel mainPanel;
     private CardLayout layout;
     public EndScreen endScreen;
+
+    // Game display dimensions
     public static final int WIDTH = 800;
     public static final int HEIGHT = 600;
     private static int GROUND_HEIGHT = 10;
+
+    // AI related fields
     private boolean aiMode = false;
     private enum Difficulty { EASY, MEDIUM, HARD }
     private Difficulty aiDifficulty = Difficulty.MEDIUM;
-    private int aiMissCount = 0;
+    private int aiMissCount = 0; // How many times the AI missed, used to make it 'learn'
 
-    private Timer timer;
-    private Tank player1;
-    private Tank player2;
-    private static int turn = 1;
-    private Bullet bullet;
-    private int explosionTimer = 0;
-    private int explosionX = -1, explosionY = -1;
-    private int currentPlayer;
-    private int[] terrain;
-    private int wind;
-    private Random random;
-    private boolean gameOver;
-    private String winner;
+    // Game objects and state
+    private Timer timer;             // Game loop timer (60 FPS)
+    private Tank player1, player2;   // The two tanks
+    private static int turn = 1;     // Turn counter (odd = player1, even = player2)
+    private Bullet bullet;           // The active bullet (if any)
+    private int explosionTimer = 0;  // Timer for explosion animation
+    private int explosionX = -1, explosionY = -1; // Explosion position
+    private int currentPlayer;       // 1 or 2, whose turn is it
+
+    private int[] terrain;           // Array holding the height of terrain at each x
+    private int wind;                // Wind value affecting bullet movement
+    private Random random;           // Random number generator
+
+    private boolean gameOver;        // Has the game ended?
+    private String winner;           // Who won
+
+    // Used to prevent drawing before setup
     private boolean it = false;
 
+    // Graphics (can be replaced by custom images)
     private BufferedImage skyImage;
-    private BufferedImage tankImage1;
-    private BufferedImage tankImage2;
+    private BufferedImage tankImage1, tankImage2;
 
-    private boolean leftPressed1 = false;
-    private boolean rightPressed1 = false;
-    private boolean leftPressed2 = false;
-    private boolean rightPressed2 = false;
+    // Key press state for smooth tank movement
+    private boolean leftPressed1 = false, rightPressed1 = false;
+    private boolean leftPressed2 = false, rightPressed2 = false;
 
+    // Controls for the human player(s)
     private JSlider angleSlider;
     private JSlider powerSlider;
     private JButton fireButton;
 
+    /**
+     * Main constructor with references for card layout navigation.
+     */
     public Game(JPanel mainPanel, CardLayout layout, EndScreen endScreen) {
+        // Image loading (disabled, uncomment to use images)
         // loadImages();
         this.mainPanel = mainPanel;
         this.layout = layout;
@@ -63,11 +79,13 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         random = new Random();
         resetGame();
 
+        // UI controls for firing
         angleSlider = new JSlider(0, 180, 90);
         powerSlider = new JSlider(0, 100, 50);
         fireButton = new JButton("Fire!");
         fireButton.addActionListener(e -> fire());
 
+        // Bottom control panel for firing controls
         JPanel controlPanel = new JPanel();
         controlPanel.add(new JLabel("Angle: "));
         controlPanel.add(angleSlider);
@@ -76,15 +94,22 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         controlPanel.add(fireButton);
         add(controlPanel, BorderLayout.SOUTH);
 
-        timer = new Timer(1000 / 60, this);
+        // Start the game loop timer
+        timer = new Timer(1000 / 60, this); // 60 FPS
         timer.start();
         it = true;
     }
 
+    /**
+     * Default constructor (for testing).
+     */
     public Game() {
         this(null, null, null);
     }
 
+    /**
+     * Resets the game state for a new game.
+     */
     private void resetGame() {
         player1 = new Tank(100, 0, Color.RED, 100);
         player2 = new Tank(700, 0, Color.ORANGE, 100);
@@ -94,15 +119,14 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         explosionTimer = 0;
         currentPlayer = 1;
         generateTerrain();
-        wind = random.nextInt(21) - 10;
+        wind = random.nextInt(21) - 10; // Wind range: -10 to +10
         gameOver = false;
         winner = null;
-        if (aiMode) {
-        	player1.x = 700;
-        	player2.x = 100;
-        }
     }
 
+    /**
+     * Generates a randomized rolling terrain using a smooth algorithm.
+     */
     private void generateTerrain() {
         terrain = new int[WIDTH];
         terrain[0] = 200;
@@ -115,75 +139,96 @@ public class Game extends JPanel implements ActionListener, KeyListener {
             if (terrain[i] > 300) terrain[i] = 300;
         }
 
+        // Position tanks on top of the ground
         player1.y = HEIGHT - terrain[player1.x] - player1.height;
         player2.y = HEIGHT - terrain[player2.x] - player2.height;
     }
 
+    /**
+     * Paints the game scene, including terrain, tanks, bullet, wind, and explosion.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        // Draw sky (use image if available)
         if (skyImage != null) {
             g.drawImage(skyImage, 0, 0, WIDTH, HEIGHT, null);
         } else {
-            g.setColor(Color.CYAN);
-            g.fillRect(0, 0, WIDTH, HEIGHT);
+            Graphics2D g2 = (Graphics2D) g;
+            Paint oldPaint = g2.getPaint();
+            GradientPaint skyGrad = new GradientPaint(0, 0, new Color(135, 206, 235), 0, HEIGHT, new Color(176, 224, 230));
+            g2.setPaint(skyGrad);
+            g2.fillRect(0, 0, WIDTH, HEIGHT);
+            g2.setPaint(oldPaint);
         }
 
+        // Draw terrain and objects
         if (it) {
-            g.setColor(Color.GREEN);
+            // Draw rolling green terrain
+            g.setColor(new Color(34, 139, 34));
+            java.awt.geom.GeneralPath ground = new java.awt.geom.GeneralPath();
+            ground.moveTo(0, HEIGHT);
             for (int i = 0; i < WIDTH; i++) {
-                g.drawLine(i, HEIGHT - terrain[i], i, HEIGHT);
+                ground.lineTo(i, HEIGHT - terrain[i]);
             }
+            ground.lineTo(WIDTH, HEIGHT);
+            ground.closePath();
+            ((Graphics2D) g).fill(ground);
 
+            // Draw tanks
             drawTank(g, player1);
             drawTank(g, player2);
 
+            // Draw bullet if present
             if (bullet != null) {
                 bullet.draw(g);
             }
 
-            // Debug line for AI aim
-            if (aiMode && currentPlayer == 2 && bullet == null) {
-                int dx = player1.x - player2.x;
-                int dy = player2.y - player1.y;
-                double angleRad = Math.atan2(-dy, dx);
-        int angle = (int) Math.toDegrees(angleRad);
-        if (angle < 0) angle += 360;
-        angle = Math.max(10, Math.min(angle, 170));
-        angle = Math.max(10, Math.min(angle, 80));
-                int power = 60;
-                double radians = Math.toRadians(angle);
-                int x1 = player2.x + player2.width / 2;
-                int y1 = player2.y;
-                int x2 = x1 + (int)(Math.cos(radians) * power * 1.5);
-                int y2 = y1 - (int)(Math.sin(radians) * power * 1.5);
-                g.setColor(Color.MAGENTA);
-                g.drawLine(x1, y1, x2, y2);
-            }
+            // Draw wind arrow and wind label
+            g.setColor(Color.BLUE);
+            g.drawString("Wind: " + wind, WIDTH - 100, 20);
+            int arrowX1 = WIDTH / 2;
+            int arrowY1 = 10;
+            int arrowX2 = WIDTH / 2 + wind * 5;
+            int arrowY2 = 10;
+            g.setColor(Color.RED);
+            g.drawLine(arrowX1, arrowY1, arrowX2, arrowY2);
+            g.fillOval(arrowX2 - 2, arrowY2 - 2, 4, 4);
 
-            if (explosionTimer > 0) {
-                g.setColor(Color.ORANGE);
-                g.fillOval(explosionX - 10, explosionY - 10, 20, 20);
-            }
-
+            String label = wind > 0 ? "→ Wind" : wind < 0 ? "← Wind" : "Wind";
             g.setColor(Color.BLACK);
-            g.drawString("Wind: " + wind, 10, 20);
-            g.drawString("Player 1 Lives: " + player1.lives, 10, 40);
-            g.drawString("Player 2 Lives: " + player2.lives, 10, 60);
-            g.drawString("Player 1 Fuel: " + player1.energy, 10, 80);
-            g.drawString("Player 2 Fuel: " + player2.energy, 10, 100);
+            g.drawString(label, WIDTH / 2 + wind * 5 + 10, arrowY2 + 5);
         }
+
+        // Draw explosion if active
+        if (explosionTimer > 0) {
+            g.setColor(Color.ORANGE);
+            g.fillOval(explosionX - 10, explosionY - 10, 20, 20);
+        }
+
+        // Draw HUD: Lives and Fuel
+        g.setColor(Color.BLACK);
+        g.drawString("Player 1 Lives: " + player1.lives, 10, 40);
+        g.drawString("Player 2 Lives: " + player2.lives, 10, 60);
+        g.drawString("Player 1 Fuel: " + player1.energy, 10, 80);
+        g.drawString("Player 2 Fuel: " + player2.energy, 10, 100);
     }
 
+    /**
+     * Main game loop. Called at each timer tick (60 times per second).
+     */
     @Override
     public void actionPerformed(ActionEvent e) {
+        // Ensure this panel has keyboard focus
         requestFocusInWindow();
 
+        // AI acts if it's their turn, no bullet, and game not over
         if (aiMode && currentPlayer == 2 && bullet == null && !gameOver) {
             aiFire();
         }
 
+        // Move bullet and handle collision
         if (bullet != null) {
             bullet.move(wind);
             checkCollision();
@@ -192,45 +237,53 @@ public class Game extends JPanel implements ActionListener, KeyListener {
             explosionTimer--;
         }
 
+        // Move tanks if keys held
         moveTanks();
         repaint();
     }
 
+    /**
+     * Handles firing logic for the current player.
+     */
     private void fire() {
         if (bullet == null) {
             int angle = angleSlider.getValue();
             int power = powerSlider.getValue();
             Tank currentTank = (currentPlayer == 1) ? player1 : player2;
 
-            
-
+            // Spawn bullet at tip of barrel
             bullet = new Bullet(currentTank.x + currentTank.width / 2, currentTank.y, angle, power);
         }
     }
 
+    /**
+     * Checks if the bullet hits terrain or a tank, or goes out of bounds.
+     */
     private void checkCollision() {
+        // If bullet hits ground or leaves screen, cause explosion and switch turn
         if (bullet.x <= 0 || bullet.x >= WIDTH - 1 || bullet.y > HEIGHT - terrain[bullet.x]) {
             if (bullet != null) {
-            for (int i = Math.max(0, bullet.getX() - 10); i < Math.min(WIDTH, bullet.getX() + 10); i++) {
-                terrain[i] = Math.max(0, terrain[i] - 10);
+                for (int i = Math.max(0, bullet.getX() - 10); i < Math.min(WIDTH, bullet.getX() + 10); i++) {
+                    terrain[i] = Math.max(0, terrain[i] - 10); // Create crater
+                }
+                explosionX = bullet.getX();
+                explosionY = bullet.getY();
+                explosionTimer = 15;
             }
-            explosionX = bullet.getX();
-            explosionY = bullet.getY();
-            explosionTimer = 15;
-        }
-        bullet = null;
-        if (aiMode && currentPlayer == 2) aiMissCount++;
+            bullet = null;
+            if (aiMode && currentPlayer == 2) aiMissCount++;
             switchPlayer();
             return;
         }
 
+        // If bullet hits the other tank, deal damage
         Tank targetTank = (currentPlayer == 1) ? player2 : player1;
         if (bullet.x >= targetTank.x && bullet.x <= targetTank.x + targetTank.width &&
             bullet.y >= targetTank.y && bullet.y <= targetTank.y + targetTank.height) {
 
             targetTank.lives--;
             bullet = null;
-            aiMissCount = 0;
+            aiMissCount = 0; // Reset AI learning if hit
 
             if (targetTank.lives <= 0) {
                 winner = (currentPlayer == 1) ? "Player 1" : "Player 2";
@@ -242,6 +295,9 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         }
     }
 
+    /**
+     * Handles game over: sets state, shows end screen if available.
+     */
     private void endGame() {
         gameOver = true;
         if (endScreen != null && layout != null && mainPanel != null) {
@@ -250,12 +306,18 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         }
     }
 
+    /**
+     * Set whether AI is enabled (true = AI Battle).
+     */
     private void setAIMode(boolean ai) {
         this.aiMode = ai;
         this.aiDifficulty = Difficulty.MEDIUM; // Default
         this.aiMissCount = 0;
     }
 
+    /**
+     * Set AI difficulty by string ("easy", "medium", "hard").
+     */
     public void setAIDifficulty(String level) {
         switch (level.toLowerCase()) {
             case "easy": aiDifficulty = Difficulty.EASY; break;
@@ -264,23 +326,32 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         }
     }
 
+    /**
+     * Switches to the next player, resets energy, and changes wind.
+     */
     private void switchPlayer() {
         turn++;
         currentPlayer = (currentPlayer == 1) ? 2 : 1;
 
+        // Restore fuel at start of turn
         if (turn % 2 == 1) {
             player2.energy = 100;
         } else {
             player1.energy = 100;
         }
 
+        // Randomize wind
         wind = random.nextInt(21) - 10;
     }
 
+    /**
+     * AI logic to move, aim, and fire at player 1.
+     */
     private void aiFire() {
         int direction = (player1.x < player2.x) ? -1 : 1;
         int distance = Math.abs(player1.x - player2.x);
 
+        // AI tank tries to move closer if far away and has fuel
         if (player2.energy >= 2 && distance > 100) {
             int steps = Math.min(player2.energy / 2, 20);
             for (int i = 0; i < steps; i++) {
@@ -289,44 +360,51 @@ public class Game extends JPanel implements ActionListener, KeyListener {
                     player2.x += step;
                     player2.energy -= 2;
                     player2.y = HEIGHT - terrain[player2.x] - player2.height;
-                    try {
-                        Thread.sleep(10);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
+                    try { Thread.sleep(5); } catch (InterruptedException ignored) {}
                 } else {
                     break;
                 }
             }
         }
 
-        int dx = player2.x - player1.x;
+        // Calculate angle to player 1
+        int dx = player1.x - player2.x;
         int dy = player2.y - player1.y;
-        double angleRad = Math.atan2(dx, dy);
+        double angleRad = Math.atan2(-dy, dx);
         int angle = (int) Math.toDegrees(angleRad);
         if (angle < 0) angle += 360;
-        angle = Math.max(10, Math.min(angle, 80));
+        if (angle > 180) angle = 360 - angle;
+        angle = Math.max(10, Math.min(angle, 170));
 
+        // Add inaccuracy based on difficulty and misses
         int randomness = 0;
         switch (aiDifficulty) {
-            case EASY: randomness = 10; break;
-            case MEDIUM: randomness = 5; break;
-            case HARD: randomness = 2; break;
+            case EASY: randomness = 2; break;   // least accurate
+            case MEDIUM: randomness = 8; break;
+            case HARD: randomness = 15; break;  // most accurate
         }
-        randomness += aiMissCount * 2;
+        randomness += aiMissCount * 1;
 
         int recoil = (aiDifficulty == Difficulty.HARD) ? 0 : (aiDifficulty == Difficulty.MEDIUM ? 5 : 10);
+        int dxAdjusted = player1.x - player2.x;
+        int dyAdjusted = player2.y - player1.y;
+        double distanceToTarget = Math.sqrt(dxAdjusted * dxAdjusted + dyAdjusted * dyAdjusted);
+
+        int playerMovementFactor = Math.abs(player1.x - dxAdjusted);
+        int learnedCorrection = aiMissCount * 2;
         int power = (int) Math.min(100, Math.max(30,
-            (distance + wind * 2) / 2.0 + aiMissCount + random.nextInt(randomness + 1 + recoil) - randomness / 2));
+            (distanceToTarget + playerMovementFactor * 0.1 + learnedCorrection + random.nextInt(randomness + 1 + recoil) - randomness / 2)));
         bullet = new Bullet(player2.x + player2.width / 2, player2.y, angle, power);
     }
 
-
-    
+    /**
+     * Draws a tank at its current position (as an image or colored rectangle).
+     */
     private void drawTank(Graphics g, Tank tank) {
         BufferedImage img = (tank == player1) ? tankImage1 : tankImage2;
         int angle = angleSlider.getValue();
 
+        // Draw the tank body
         if (img != null) {
             g.drawImage(img, tank.x, tank.y, tank.width, tank.height, null);
         } else {
@@ -334,6 +412,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
             g.fillRect(tank.x, tank.y, tank.width, tank.height);
         }
 
+        // Draw the tank barrel
         int baseX = tank.x + tank.width / 2;
         int baseY = tank.y + 5;
         double radians = Math.toRadians(angle);
@@ -341,10 +420,17 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         int endX = baseX + (int)(barrelLength * Math.cos(radians));
         int endY = baseY - (int)(barrelLength * Math.sin(radians));
 
-        g.setColor(Color.DARK_GRAY);
-        g.drawLine(baseX, baseY, endX, endY);
-        }
+        Graphics2D g2d = (Graphics2D) g;
+        Stroke old = g2d.getStroke();
+        g2d.setColor(Color.DARK_GRAY);
+        g2d.setStroke(new BasicStroke(4)); // thicker barrel
+        g2d.drawLine(baseX, baseY, endX, endY);
+        g2d.setStroke(old);
+    }
 
+    /**
+     * Loads image assets (currently commented out).
+     */
     private void loadImages() {
         try {
             // skyImage = ImageIO.read(getClass().getResource("/sky.png"));
@@ -355,6 +441,9 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         }
     }
 
+    /**
+     * Moves tanks if movement keys are pressed, reducing their fuel.
+     */
     private void moveTanks() {
         if (leftPressed1 && player1.x > 0 && turn % 2 == 1 && player1.energy > 0) {
             player1.x -= 2;
@@ -364,19 +453,21 @@ public class Game extends JPanel implements ActionListener, KeyListener {
             player1.x += 2;
             player1.energy -= 2;
         }
-        if (!aiMode && leftPressed2 && player2.x > 0 && turn % 2 == 0 && player2.energy > 0) {
+        if (leftPressed2 && player2.x > 0 && turn % 2 == 0 && player2.energy > 0) {
             player2.x -= 2;
             player2.energy -= 2;
         }
-        if (!aiMode && rightPressed2 && player2.x < WIDTH - player2.width && turn % 2 == 0 && player2.energy > 0) {
+        if (rightPressed2 && player2.x < WIDTH - player2.width && turn % 2 == 0 && player2.energy > 0) {
             player2.x += 2;
             player2.energy -= 2;
         }
 
+        // Reposition tanks to sit on ground after moving
         player1.y = HEIGHT - terrain[player1.x] - player1.height;
         player2.y = HEIGHT - terrain[player2.x] - player2.height;
     }
 
+    // Keyboard controls: update movement key flags and reset on 'R'
     @Override
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
@@ -403,6 +494,9 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     @Override
     public void keyTyped(KeyEvent e) {}
 
+    /**
+     * Main entry point for the program. Creates window and screens.
+     */
     public static void main(String[] args) {
         JFrame frame = new JFrame("Hills of Fire");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -445,16 +539,17 @@ public class Game extends JPanel implements ActionListener, KeyListener {
                     gamePanel.setAIMode(true);
                     gamePanel.setAIDifficulty(choice);
                     layout.show(mainPanel, "GAME");
-                    gamePanel.resetGame();
                 }
             } else if (source.getText().equals("1 vs 1")) {
                 gamePanel.resetGame();
+                gamePanel.setAIMode(false); // ensure pure PvP
                 layout.show(mainPanel, "GAME");
             } else {
                 layout.show(mainPanel, "START");
             }
         });
 
+        // Add all screens to the main card panel
         mainPanel.add(startScreen, "START");
         mainPanel.add(howToPlayScreen, "HOW");
         mainPanel.add(gameModeScreen, "MODE");
