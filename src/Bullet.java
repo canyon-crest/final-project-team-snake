@@ -1,5 +1,6 @@
 import java.awt.Color;
 import java.awt.Graphics;
+import java.util.*;
 
 /**
  * Represents a projectile bullet in the game.
@@ -8,6 +9,7 @@ class Bullet {
     int x, y;
     double dx, dy;
     final double GRAVITY = 0.1;
+    static ArrayList<Bullet> past = new ArrayList<Bullet>();
 
     /**
      * Constructs a new Bullet with the given position, angle, and power.
@@ -22,6 +24,7 @@ class Bullet {
         double radian = Math.toRadians(angle);
         dx = Math.cos(radian) * power / 10;
         dy = -Math.sin(radian) * power / 10;
+        past.add(this);
     }
 
     /**
