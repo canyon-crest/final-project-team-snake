@@ -2,13 +2,21 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
 
+/**
+ * Represents the "How to Play" screen, which displays instructions to the player.
+ */
 public class HowToPlayScreen extends JPanel {
     private JButton backButton;
+    private JTextArea instructionsArea;
 
+    /**
+     * Constructs the HowToPlayScreen with instructions and a back button.
+     * @param backAction the ActionListener for the back button
+     */
     public HowToPlayScreen(ActionListener backAction) {
         setLayout(new BorderLayout());
 
-        JTextArea instructionsArea = new JTextArea();
+        instructionsArea = new JTextArea();
         instructionsArea.setEditable(false);
         instructionsArea.setWrapStyleWord(true);
         instructionsArea.setLineWrap(true);
@@ -26,5 +34,29 @@ public class HowToPlayScreen extends JPanel {
         backButton = new JButton("Back to Main Menu");
         backButton.addActionListener(backAction);
         add(backButton, BorderLayout.SOUTH);
+    }
+
+    /**
+     * Gets the back button for navigation.
+     * @return the back button JButton
+     */
+    public JButton getBackButton() {
+        return backButton;
+    }
+
+    /**
+     * Gets the instructional text currently displayed.
+     * @return the instructions text as a String
+     */
+    public String getInstructionsText() {
+        return instructionsArea.getText();
+    }
+
+    /**
+     * Sets the instructional text to display new instructions.
+     * @param text the new instructions to set
+     */
+    public void setInstructionsText(String text) {
+        instructionsArea.setText(text);
     }
 }
