@@ -37,7 +37,7 @@ public class StartScreen extends JPanel {
         gbc.gridy = 2;
         add(howToPlayButton, gbc);
 
-        exitButton = new JButton("Exit");
+        exitButton = new JButton("Mr. Hare Button");
         exitButton.addActionListener(exitAction);
         gbc.gridy = 3;
         add(exitButton, gbc);
