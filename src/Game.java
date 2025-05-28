@@ -1,5 +1,3 @@
-// Main game panel and logic for "Hills of Fire"
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -60,13 +58,15 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     private JSlider angleSlider;
     private JSlider powerSlider;
     private JButton fireButton;
+    
+    private static int time = 0;
 
     /**
      * Main constructor with references for card layout navigation.
      */
     public Game(JPanel mainPanel, CardLayout layout, EndScreen endScreen) {
         // Image loading (disabled, uncomment to use images)
-        // loadImages();
+        loadImages();
         this.mainPanel = mainPanel;
         this.layout = layout;
         this.endScreen = endScreen;
@@ -151,7 +151,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // Draw sky (use image if available)
+        // Draw sky
         if (skyImage != null) {
             g.drawImage(skyImage, 0, 0, WIDTH, HEIGHT, null);
         } else {
@@ -166,7 +166,8 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         // Draw terrain and objects
         if (it) {
             // Draw rolling green terrain
-            g.setColor(new Color(34, 139, 34));
+            //g.setColor(new Color(34, 139, 34));
+            g.setColor(new Color(9, 44, 87));
             java.awt.geom.GeneralPath ground = new java.awt.geom.GeneralPath();
             ground.moveTo(0, HEIGHT);
             for (int i = 0; i < WIDTH; i++) {
@@ -240,6 +241,8 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         // Move tanks if keys held
         moveTanks();
         repaint();
+        
+        time++;
     }
 
     /**
@@ -429,16 +432,18 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     }
 
     /**
-     * Loads image assets (currently commented out).
+     * Loads image assets.
      */
     private void loadImages() {
         try {
-            // skyImage = ImageIO.read(getClass().getResource("/sky.png"));
-            // tankImage1 = ImageIO.read(getClass().getResource("/tank1.png"));
-            // tankImage2 = ImageIO.read(getClass().getResource("/tank2.png"));
-        } catch (IllegalArgumentException e) {
-            System.out.println("Could not load one or more images.");
-        }
+             skyImage = ImageIO.read(getClass().getResource("/sky.png"));
+             tankImage1 = ImageIO.read(getClass().getResource("/tank1.png"));
+             tankImage2 = ImageIO.read(getClass().getResource("/tank2.png"));
+//        } catch (IllegalArgumentException e) {
+//            System.out.println("Could not load images.");
+        } catch (IOException e) {
+			// TODO Auto-generated catch block
+        	System.out.println("Could not load images.");		}
     }
 
     /**
