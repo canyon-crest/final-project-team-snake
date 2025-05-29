@@ -5,6 +5,7 @@ import java.util.Random;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  * The main game class for Hills of Fire.
@@ -42,6 +43,8 @@ public class Game extends JPanel implements ActionListener, KeyListener {
 
     private boolean gameOver;        // Has the game ended?
     private String winner;           // Who won
+
+    private ArrayList<PowerUp> powerUps = new ArrayList<>();
 
     // Used to prevent drawing before setup
     private boolean it = false;
@@ -142,7 +145,27 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         // Position tanks on top of the ground
         player1.y = HEIGHT - terrain[player1.x] - player1.height;
         player2.y = HEIGHT - terrain[player2.x] - player2.height;
+
+        // Randomly add 1-3 power-ups on the hills
+        powerUps.clear();
+        int numPowerUps = 1 + random.nextInt(3); // 1 to 3 power-ups
+        for (int i = 0; i < numPowerUps; i++) {
+            int px = 50 + random.nextInt(WIDTH - 100);
+            int py = HEIGHT - terrain[px] - 10;
+            PowerUp powerUp;
+
+            int type = random.nextInt(3); // 0, 1, or 2
+            if (type == 0)
+                powerUp = new HealthPowerUp(px, py);
+            else if (type == 1)
+                powerUp = new FuelPowerUp(px, py);
+            else
+                powerUp = new DoubleDamagePowerUp(px, py);
+
+            powerUps.add(powerUp);
+        }
     }
+
 
     /**
      * Paints the game scene, including terrain, tanks, bullet, wind, and explosion.
@@ -151,69 +174,153 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // Draw sky
-        if (skyImage != null) {
-            g.drawImage(skyImage, 0, 0, WIDTH, HEIGHT, null);
-        } else {
-            Graphics2D g2 = (Graphics2D) g;
-            Paint oldPaint = g2.getPaint();
-            GradientPaint skyGrad = new GradientPaint(0, 0, new Color(135, 206, 235), 0, HEIGHT, new Color(176, 224, 230));
-            g2.setPaint(skyGrad);
-            g2.fillRect(0, 0, WIDTH, HEIGHT);
-            g2.setPaint(oldPaint);
+        // ---- 1. Draw blue sky gradient ----
+        Graphics2D g2 = (Graphics2D) g;
+        Paint oldPaint = g2.getPaint();
+        GradientPaint skyGrad = new GradientPaint(0, 0, new Color(120, 170, 255), 0, HEIGHT, new Color(46, 83, 144));
+        g2.setPaint(skyGrad);
+        g2.fillRect(0, 0, WIDTH, HEIGHT);
+        g2.setPaint(oldPaint);
+
+        // ---- 2. Draw distant hills (optional parallax) ----
+        g.setColor(new Color(40, 80, 170));
+        int[] xHills = {0, 200, 400, 600, WIDTH};
+        int[] yHills = {HEIGHT, HEIGHT - 200, HEIGHT - 150, HEIGHT - 220, HEIGHT};
+        g.fillPolygon(xHills, yHills, xHills.length);
+
+        // ---- 3. Draw terrain/ground ----
+        g.setColor(new Color(9, 44, 87));
+        java.awt.geom.GeneralPath ground = new java.awt.geom.GeneralPath();
+        ground.moveTo(0, HEIGHT);
+        for (int i = 0; i < WIDTH; i++) {
+            ground.lineTo(i, HEIGHT - terrain[i]);
+        }
+        ground.lineTo(WIDTH, HEIGHT);
+        ground.closePath();
+        ((Graphics2D) g).fill(ground);
+
+        // ---- 4. Draw power-ups first (so tanks sit on top) ----
+        for (PowerUp p : powerUps) {
+            p.draw(g);
         }
 
-        // Draw terrain and objects
-        if (it) {
-            // Draw rolling green terrain
-            //g.setColor(new Color(34, 139, 34));
-            g.setColor(new Color(9, 44, 87));
-            java.awt.geom.GeneralPath ground = new java.awt.geom.GeneralPath();
-            ground.moveTo(0, HEIGHT);
-            for (int i = 0; i < WIDTH; i++) {
-                ground.lineTo(i, HEIGHT - terrain[i]);
-            }
-            ground.lineTo(WIDTH, HEIGHT);
-            ground.closePath();
-            ((Graphics2D) g).fill(ground);
+        // ---- 5. Draw tanks ----
+        drawTank(g, player1);
+        drawTank(g, player2);
 
-            // Draw tanks
-            drawTank(g, player1);
-            drawTank(g, player2);
-
-            // Draw bullet if present
-            if (bullet != null) {
-                bullet.draw(g);
-            }
-
-            // Draw wind arrow and wind label
-            g.setColor(Color.BLUE);
-            g.drawString("Wind: " + wind, WIDTH - 100, 20);
-            int arrowX1 = WIDTH / 2;
-            int arrowY1 = 10;
-            int arrowX2 = WIDTH / 2 + wind * 5;
-            int arrowY2 = 10;
-            g.setColor(Color.RED);
-            g.drawLine(arrowX1, arrowY1, arrowX2, arrowY2);
-            g.fillOval(arrowX2 - 2, arrowY2 - 2, 4, 4);
-
-            String label = wind > 0 ? "→ Wind" : wind < 0 ? "← Wind" : "Wind";
-            g.setColor(Color.BLACK);
-            g.drawString(label, WIDTH / 2 + wind * 5 + 10, arrowY2 + 5);
+        // ---- 6. Draw bullet ----
+        if (bullet != null) {
+            bullet.draw(g);
         }
 
-        // Draw explosion if active
+        // ---- 7. Draw explosion (if any) ----
         if (explosionTimer > 0) {
             g.setColor(Color.ORANGE);
-            g.fillOval(explosionX - 10, explosionY - 10, 20, 20);
+            g.fillOval(explosionX - 15, explosionY - 15, 30, 30);
         }
 
-        // Draw HUD: Lives and Fuel
+        // ---- 8. Draw wind info (center top) ----
+        int windBoxW = 115, windBoxH = 32;
+        int windBoxX = WIDTH/2 - windBoxW/2, windBoxY = 10;
+        g.setColor(new Color(255,255,255,220));
+        g.fillRoundRect(windBoxX, windBoxY, windBoxW, windBoxH, 18, 18);
+
+        g.setColor(Color.BLUE.darker());
+        g.setFont(new Font("Arial", Font.BOLD, 14));
+        g.drawString("Wind: " + wind, windBoxX + 8, windBoxY + 19);
+        int arrowX1 = windBoxX + windBoxW/2;
+        int arrowY1 = windBoxY + windBoxH - 10;
+        int arrowX2 = arrowX1 + wind * 5;
+        g.setColor(Color.RED);
+        g.drawLine(arrowX1, arrowY1, arrowX2, arrowY1);
+        g.fillOval(arrowX2 - 2, arrowY1 - 2, 5, 5);
+
         g.setColor(Color.BLACK);
-        g.drawString("Player 1 Lives: " + player1.lives, 10, 40);
-        g.drawString("Player 2 Lives: " + player2.lives, 10, 60);
-        g.drawString("Player 1 Fuel: " + player1.energy, 10, 80);
-        g.drawString("Player 2 Fuel: " + player2.energy, 10, 100);
+        g.setFont(new Font("Arial", Font.PLAIN, 11));
+        String windLabel = wind > 0 ? "→ Wind" : wind < 0 ? "← Wind" : "Wind";
+        g.drawString(windLabel, windBoxX + windBoxW - 55, windBoxY + 26);
+
+        // // ---- 9. Power-Up Legend (top right, separate from wind box) ----
+        // int legendX = WIDTH - 135, legendY = 14;
+        // g.setColor(new Color(255,255,255,230));
+        // g.fillRoundRect(legendX - 9, legendY - 5, 118, 62, 13, 13);
+        // g.setColor(Color.BLACK);
+        // g.setFont(new Font("Arial", Font.BOLD, 13));
+        // g.drawString("Power-Ups:", legendX, legendY + 10);
+
+        // // Health
+        // g.setColor(Color.RED);
+        // g.fillOval(legendX, legendY + 18, 16, 16);
+        // g.setColor(Color.WHITE);
+        // g.setFont(new Font("Arial", Font.BOLD, 13));
+        // g.drawString("+", legendX + 5, legendY + 30);
+        // g.setColor(Color.BLACK);
+        // g.setFont(new Font("Arial", Font.PLAIN, 11));
+        // g.drawString("Health", legendX + 22, legendY + 30);
+
+        // // Fuel
+        // g.setColor(new Color(40, 180, 60));
+        // g.fillOval(legendX, legendY + 36, 16, 16);
+        // g.setColor(Color.BLACK);
+        // g.setFont(new Font("Arial", Font.BOLD, 12));
+        // g.drawString("F", legendX + 5, legendY + 48);
+        // g.setFont(new Font("Arial", Font.PLAIN, 11));
+        // g.drawString("Fuel", legendX + 22, legendY + 48);
+
+        // // Double Damage (if used)
+        // g.setColor(Color.YELLOW.darker());
+        // g.fillOval(legendX, legendY + 54, 16, 16);
+        // g.setColor(Color.BLACK);
+        // g.setFont(new Font("Arial", Font.BOLD, 12));
+        // g.drawString("D", legendX + 5, legendY + 66);
+        // g.setFont(new Font("Arial", Font.PLAIN, 11));
+        // g.drawString("Double", legendX + 22, legendY + 66);
+
+        // ---- 10. HUD for Player 1 (left, vertical stack) ----
+        int p1X = 15, p1Y = 42;
+        g.setColor(new Color(255,255,255,210));
+        g.fillRoundRect(p1X - 6, p1Y - 22, 110, 80, 13, 13);
+
+        g.setColor(Color.BLACK);
+        g.setFont(new Font("Arial", Font.BOLD, 15));
+        g.drawString("Player 1", p1X, p1Y);
+        g.setFont(new Font("Arial", Font.PLAIN, 13));
+        g.drawString("Lives: " + player1.lives, p1X, p1Y + 18);
+        g.drawString("Fuel: " + player1.energy, p1X, p1Y + 36);
+
+        int statusY = p1Y + 54;
+        if (player1.doubleDamage) {
+            g.setColor(Color.YELLOW.darker());
+            g.drawString("Double Dmg!", p1X, statusY);
+            statusY += 16;
+        }
+        if (player1.shielded) {
+            g.setColor(Color.BLUE);
+            g.drawString("Shielded!", p1X, statusY);
+        }
+
+        // ---- 11. HUD for Player 2 (right, vertical stack) ----
+        int p2X = WIDTH - 120, p2Y = 42;
+        g.setColor(new Color(255,255,255,210));
+        g.fillRoundRect(p2X - 6, p2Y - 22, 110, 80, 13, 13);
+
+        g.setColor(Color.BLACK);
+        g.setFont(new Font("Arial", Font.BOLD, 15));
+        g.drawString("Player 2", p2X, p2Y);
+        g.setFont(new Font("Arial", Font.PLAIN, 13));
+        g.drawString("Lives: " + player2.lives, p2X, p2Y + 18);
+        g.drawString("Fuel: " + player2.energy, p2X, p2Y + 36);
+
+        int p2StatusY = p2Y + 54;
+        if (player2.doubleDamage) {
+            g.setColor(Color.YELLOW.darker());
+            g.drawString("Double Dmg!", p2X, p2StatusY);
+            p2StatusY += 16;
+        }
+        if (player2.shielded) {
+            g.setColor(Color.BLUE);
+            g.drawString("Shielded!", p2X, p2StatusY);
+        }
     }
 
     /**
@@ -279,12 +386,21 @@ public class Game extends JPanel implements ActionListener, KeyListener {
             return;
         }
 
-        // If bullet hits the other tank, deal damage
+        // Tank hit detection and double damage logic
+        Tank shooter = (currentPlayer == 1) ? player1 : player2;
         Tank targetTank = (currentPlayer == 1) ? player2 : player1;
+
         if (bullet.x >= targetTank.x && bullet.x <= targetTank.x + targetTank.width &&
             bullet.y >= targetTank.y && bullet.y <= targetTank.y + targetTank.height) {
 
-            targetTank.lives--;
+            // Double damage check
+            if (shooter.doubleDamage) {
+                targetTank.lives -= 2;
+                shooter.doubleDamage = false; // Power-up consumed after hit
+            } else {
+                targetTank.lives -= 1;
+            }
+
             bullet = null;
             aiMissCount = 0; // Reset AI learning if hit
 
@@ -470,6 +586,22 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         // Reposition tanks to sit on ground after moving
         player1.y = HEIGHT - terrain[player1.x] - player1.height;
         player2.y = HEIGHT - terrain[player2.x] - player2.height;
+
+        // Power-up collection check (add this here)
+        for (int i = powerUps.size() - 1; i >= 0; i--) {
+            PowerUp p = powerUps.get(i);
+            boolean collected = false;
+            if (p.isCollectedBy(player1)) {
+                p.applyEffect(player1);
+                collected = true;
+            } else if (p.isCollectedBy(player2)) {
+                p.applyEffect(player2);
+                collected = true;
+            }
+            if (collected) {
+                powerUps.remove(i);
+            }
+        }
     }
 
     // Keyboard controls: update movement key flags and reset on 'R'
