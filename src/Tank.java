@@ -7,6 +7,9 @@ import java.awt.Graphics;
 class Tank {
     int x, y, width, height, lives, energy;
     Color color;
+    public boolean doubleDamageNextShot = false;
+    public boolean doubleDamage = false;
+    public boolean shielded = false;
 
     /**
      * Constructs a new Tank with the given position, color, and energy.
@@ -31,6 +34,10 @@ class Tank {
      */
     public int getX() {
         return x;
+    }
+
+    public void setDoubleDamageForNextShot() {
+        doubleDamageNextShot = true;
     }
 
     /**
