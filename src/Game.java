@@ -174,21 +174,18 @@ public class Game extends JPanel implements ActionListener, KeyListener {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // ---- 1. Draw blue sky gradient ----
-        Graphics2D g2 = (Graphics2D) g;
-        Paint oldPaint = g2.getPaint();
-        GradientPaint skyGrad = new GradientPaint(0, 0, new Color(120, 170, 255), 0, HEIGHT, new Color(46, 83, 144));
-        g2.setPaint(skyGrad);
-        g2.fillRect(0, 0, WIDTH, HEIGHT);
-        g2.setPaint(oldPaint);
+        // --- 1. Always draw sky PNG as background ---
+        if (skyImage != null) {
+            g.drawImage(skyImage, 0, 0, WIDTH, HEIGHT, null); // Stretches to fit panel
+        }
 
-        // ---- 2. Draw distant hills (optional parallax) ----
-        g.setColor(new Color(40, 80, 170));
+        // --- 2. Distant hills (optional, drawn over sky) ---
+        g.setColor(new Color(40, 80, 170, 140));
         int[] xHills = {0, 200, 400, 600, WIDTH};
         int[] yHills = {HEIGHT, HEIGHT - 200, HEIGHT - 150, HEIGHT - 220, HEIGHT};
         g.fillPolygon(xHills, yHills, xHills.length);
 
-        // ---- 3. Draw terrain/ground ----
+        // --- 3. Draw terrain/ground ---
         g.setColor(new Color(9, 44, 87));
         java.awt.geom.GeneralPath ground = new java.awt.geom.GeneralPath();
         ground.moveTo(0, HEIGHT);
@@ -199,27 +196,27 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         ground.closePath();
         ((Graphics2D) g).fill(ground);
 
-        // ---- 4. Draw power-ups first (so tanks sit on top) ----
+        // --- 4. Draw power-ups ---
         for (PowerUp p : powerUps) {
             p.draw(g);
         }
 
-        // ---- 5. Draw tanks ----
+        // --- 5. Draw tanks ---
         drawTank(g, player1);
         drawTank(g, player2);
 
-        // ---- 6. Draw bullet ----
+        // --- 6. Draw bullet ---
         if (bullet != null) {
             bullet.draw(g);
         }
 
-        // ---- 7. Draw explosion (if any) ----
+        // --- 7. Draw explosion (if any) ---
         if (explosionTimer > 0) {
             g.setColor(Color.ORANGE);
             g.fillOval(explosionX - 15, explosionY - 15, 30, 30);
         }
 
-        // ---- 8. Draw wind info (center top) ----
+        // --- 8. Draw wind info (center top) ---
         int windBoxW = 115, windBoxH = 32;
         int windBoxX = WIDTH/2 - windBoxW/2, windBoxY = 10;
         g.setColor(new Color(255,255,255,220));
@@ -240,43 +237,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
         String windLabel = wind > 0 ? "→ Wind" : wind < 0 ? "← Wind" : "Wind";
         g.drawString(windLabel, windBoxX + windBoxW - 55, windBoxY + 26);
 
-        // // ---- 9. Power-Up Legend (top right, separate from wind box) ----
-        // int legendX = WIDTH - 135, legendY = 14;
-        // g.setColor(new Color(255,255,255,230));
-        // g.fillRoundRect(legendX - 9, legendY - 5, 118, 62, 13, 13);
-        // g.setColor(Color.BLACK);
-        // g.setFont(new Font("Arial", Font.BOLD, 13));
-        // g.drawString("Power-Ups:", legendX, legendY + 10);
-
-        // // Health
-        // g.setColor(Color.RED);
-        // g.fillOval(legendX, legendY + 18, 16, 16);
-        // g.setColor(Color.WHITE);
-        // g.setFont(new Font("Arial", Font.BOLD, 13));
-        // g.drawString("+", legendX + 5, legendY + 30);
-        // g.setColor(Color.BLACK);
-        // g.setFont(new Font("Arial", Font.PLAIN, 11));
-        // g.drawString("Health", legendX + 22, legendY + 30);
-
-        // // Fuel
-        // g.setColor(new Color(40, 180, 60));
-        // g.fillOval(legendX, legendY + 36, 16, 16);
-        // g.setColor(Color.BLACK);
-        // g.setFont(new Font("Arial", Font.BOLD, 12));
-        // g.drawString("F", legendX + 5, legendY + 48);
-        // g.setFont(new Font("Arial", Font.PLAIN, 11));
-        // g.drawString("Fuel", legendX + 22, legendY + 48);
-
-        // // Double Damage (if used)
-        // g.setColor(Color.YELLOW.darker());
-        // g.fillOval(legendX, legendY + 54, 16, 16);
-        // g.setColor(Color.BLACK);
-        // g.setFont(new Font("Arial", Font.BOLD, 12));
-        // g.drawString("D", legendX + 5, legendY + 66);
-        // g.setFont(new Font("Arial", Font.PLAIN, 11));
-        // g.drawString("Double", legendX + 22, legendY + 66);
-
-        // ---- 10. HUD for Player 1 (left, vertical stack) ----
+        // --- 9. HUD for Player 1 (left, vertical stack) ---
         int p1X = 15, p1Y = 42;
         g.setColor(new Color(255,255,255,210));
         g.fillRoundRect(p1X - 6, p1Y - 22, 110, 80, 13, 13);
@@ -299,7 +260,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
             g.drawString("Shielded!", p1X, statusY);
         }
 
-        // ---- 11. HUD for Player 2 (right, vertical stack) ----
+        // --- 10. HUD for Player 2 (right, vertical stack) ---
         int p2X = WIDTH - 120, p2Y = 42;
         g.setColor(new Color(255,255,255,210));
         g.fillRoundRect(p2X - 6, p2Y - 22, 110, 80, 13, 13);
@@ -322,6 +283,7 @@ public class Game extends JPanel implements ActionListener, KeyListener {
             g.drawString("Shielded!", p2X, p2StatusY);
         }
     }
+
 
     /**
      * Main game loop. Called at each timer tick (60 times per second).
